@@ -226,14 +226,24 @@ def sudoku_solver_sub_func(options_grid, output_grid, single_option_squares, fir
 
 
 def minimum_options_square(options_grid):
+    """
+    Finds the row and column number of the square with the least options
+
+    :param options_grid: Grid of the options for each square, len(9) list of len(9) lists of sets of ints
+    :return: len(2) tuple
+        [1] min_options_row: Row of the square with the least options
+        [2] min_options_col: Column of the square with the least options
+    """
 
     min_num_options = float('inf')
-    for row in range(9):
-        for col in range(9):
-            if 1 < len(options_grid[row][col]) < min_num_options:
-                min_num_options = len(options_grid[row][col])
-                min_options_row = row
-                min_options_col = col
+    for row_num, row in enumerate(options_grid):
+        for col_num, square in enumerate(row):
+            # Check if the current square has less options than the previous minimum
+            # Ignore squares with one option (as these have already been solved for)
+            if 1 < len(square) < min_num_options:
+                min_num_options = len(square)
+                min_options_row = row_num
+                min_options_col = col_num
 
     return min_options_row, min_options_col
 
