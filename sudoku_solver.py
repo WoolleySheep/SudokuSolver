@@ -233,8 +233,8 @@ def minimum_options_square(options_grid):
 
     :param options_grid: Grid of the options for each square, len(9) list of len(9) lists of sets of ints
     :return: len(2) tuple
-        [1] min_options_row: Row of the square with the least options
-        [2] min_options_col: Column of the square with the least options
+        [0] min_options_row: Row of the square with the least options
+        [1] min_options_col: Column of the square with the least options
     """
 
     min_num_options = float('inf')
@@ -335,81 +335,70 @@ def grid_scanning(options_grid, single_option_squares):
     :return: True if a single-option square was found, None if a single-option square could not be found
     """
 
-    # Search for an option occuring once in a row
     # 'sample' is used to randomise the search order; otherwise squares found in the top-left would have to be
     # retraversed each time grid scanning was called
-    for row in sample(range(9), 9):
-        for col in sample(range(9), 9):
-            if len(options_grid[row][col]) > 1:
-                options = options_grid[row][col].copy()
-                for col2 in range(9):
-                    if col != col2:
-                        options -= options_grid[row][col2]
-                        if len(options) == 0:
-                            break
-                else:
-                    if len(options) == 1:
-                        single_option_squares.add((row, col))
-                        options_grid[row][col] = options
-                        return True
+    for row_num in sample(range(9), 9):
+        for col_num in sample(range(9), 9):
+            if len(options_grid[row_num][col_num]) > 1:
+                square_options = options_grid[row_num][col_num].copy()
 
-    # Columns
-    for col in sample(range(9), 9):
-        for row in sample(range(9), 9):
-            if len(options_grid[row][col]) > 1:
-                options = options_grid[row][col].copy()
-                for row2 in range(9):
-                    if row != row2:
-                        options -= options_grid[row2][col]
-                        if len(options) == 0:
-                            break
-                else:
-                    if len(options) == 1:
-                        single_option_squares.add((row, col))
-                        options_grid[row][col] = options
-                        return True
+                # Make a set of all of the options that could occur in any other square of the row
+                row = [options_grid[row_num][col_num2].copy() for col_num2 in range(9) if col_num != col_num2]
+                row_options = set().union(*row)
+                # Find the options that are unique to that square
+                square_unique_row_options = square_options - row_options
+                # If there is only one unique option, add this to single-option squares
+                if len(square_unique_row_options) == 1:
+                    single_option_squares.add((row_num, col_num))
+                    options_grid[row_num][col_num] = square_unique_row_options
+                    return True
 
-    # Boxes
-    for box in sample(range(9), 9):
-        box_start_row = 3 * (box // 3)
-        box_start_col = 3 * (box % 3)
-        for row_delta in sample(range(3), 3):
-            row = box_start_row + row_delta
-            for col_delta in sample(range(3), 3):
-                col = box_start_col + col_delta
-                if len(options_grid[row][col]) > 1:
-                    options = options_grid[row][col].copy()
-                    for i in range(9):
-                        row2 = box_start_row + i // 3
-                        col2 = box_start_col + i % 3
-                        if row != row2 or col != col2:
-                            options -= options_grid[row2][col2]
-                            if len(options) == 0:
-                                break
-                    else:
-                        if len(options) == 1:
-                            single_option_squares.add((row, col))
-                            options_grid[row][col] = options
+                # Make a set of all of the options that could occur in any other square of the column
+                col = [options_grid[row_num2][col_num].copy() for row_num2 in range(9) if row_num != row_num2]
+                col_options = set().union(*col)
+                square_unique_col_options = square_options - col_options
+                if len(square_unique_col_options) == 1:
+                    single_option_squares.add((row_num, col_num))
+                    options_grid[row_num][col_num] = square_unique_col_options
+                    return True
 
+                # Make a set of all of the options that could occur in any other square of the box
+                box_start_row_num, box_start_col_num = box2start_row_col(row_col2box(row_num, col_num))
+                box = [options_grid[box_start_row_num + delta // 3][box_start_col_num + delta % 3].copy()
+                       for delta in range(9) if row_num != box_start_row_num + delta // 3 or
+                       col_num != box_start_col_num + delta % 3]
+                box_options = set().union(*box)
+                square_unique_box_options = square_options - box_options
+                if len(square_unique_box_options) == 1:
+                    single_option_squares.add((row_num, col_num))
+                    options_grid[row_num][col_num] = square_unique_box_options
+                    return True
+
+    # If no single-option squares could be found, return None
     return
 
 
 def initialise_grid(starting_grid):
+    """
+    Create the options grid and single-options squares set from the starting grid
+
+    :param starting_grid: Representation of the given squares, len(9) list of len(9) lists of ints
+    :return: len(2) tuple
+        [0] single_option_squares: Squares with a single option that have not yet been processed,
+            set of len(2) tuples of ints
+        [1] options_grid: Grid of the options for each square, len(9) list of len(9) lists of sets of ints
+    """
 
     single_option_squares = set()
 
-    row_options = []
-    for row in starting_grid:
-        set1 = set(range(1, 10))
-        set2 = set(row)
-        row_options.append(set1 - set2)
+    # Set of all the unique options for unfilled squares in each row
+    row_options = [set(range(1, 10)) - set(row) for row in starting_grid]
 
-    column_options = []
-    for col_num in range(9):
-        set1 = set(range(1, 10))
-        set2 = set([starting_grid[row_num][col_num] for row_num in range(9)])
-        column_options.append(set1 - set2)
+    # Set of all the unique options for unfilled squares in each column
+    col_options = [set(range(1, 10)) - set([starting_grid[row_num][col_num] for row_num in range(9)])
+                   for col_num in range(9)]
 
+    # Set of all the unique options for unfilled squares in each column
     box_options = []
     for i in range(3):
         for j in range(3):
@@ -418,15 +407,19 @@ def initialise_grid(starting_grid):
             set2 = set(chain.from_iterable(x))
             box_options.append(set1 - set2)
 
+    # Determine the options for each square in the grid
     options_grid = []
     for row in range(9):
         options_row = []
         for col in range(9):
+            # If the value of a square is known from the starting grid, assign it only one option
             if starting_grid[row][col] != 0:
                 options_row.append({starting_grid[row][col]})
+            # If the value of a square is unkown, determine all of the options
             else:
-                options = row_options[row] & column_options[col] & box_options[row_col2box(row, col)]
+                options = row_options[row] & col_options[col] & box_options[row_col2box(row, col)]
                 options_row.append(options)
+                # If there is only one option for a square, add it to single-option squares
                 if len(options) == 1:
                     single_option_squares.add((row, col))
         options_grid.append(options_row)
@@ -456,8 +449,8 @@ def box2start_row_col(box_num):
 
     :param box_num: Int
     :return: len(2) tuple
-        [1] start_row_num: Int
-        [2] start_col_num: Int
+        [0] start_row_num: Int
+        [1] start_col_num: Int
     """
 
     start_row_num = 3 * (box_num // 3)
