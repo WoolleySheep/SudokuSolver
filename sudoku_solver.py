@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 __author__ = "Matthew Woolley"
 
 
-def sudoku_GUI():
+def sudoku_gui():
     """
     Displays a GUI to enter the initial sudoku values into, and allows the sudoku program to be activated
 
@@ -32,7 +32,8 @@ def sudoku_GUI():
         squares = [square_entry.get() for square_entry in square_entries]
         # Check all of the square values are valid
         if all([is_valid_square_input(square) for square in squares]) is False:
-            lbl_error.config(text="One or more inputs is incorrect\nAll inputs must be integers >= 1 and <= 9\nPlease try again", font="Calibri 15", bg="red", fg="black")
+            lbl_error.config(text="One or more inputs is incorrect\nAll inputs must be integers >= 1 and <= 9\n"
+                                  "Please try again", font="Calibri 15", bg="red", fg="black")
         else:
             # Convert the square values to a starting grid
             squares_numeric = [int(square) if square != "" else 0 for square in squares]
@@ -42,7 +43,9 @@ def sudoku_GUI():
                 lbl_error.config(text="Successful input", font="Calibri 15", bg="green", fg="white")
                 sudoku_solver(starting_grid)
             else:
-                lbl_error.config(text="One or more inputs is incorrect\nThere can be no repeats in rows, columns or boxes\nPlease try again", font="Calibri 15", bg="red", fg="black")
+                lbl_error.config(text="One or more inputs is incorrect\n"
+                                      "There can be no repeats in rows, columns or boxes\nPlease try again",
+                                 font="Calibri 15", bg="red", fg="black")
 
     root = tk.Tk()
 
@@ -64,7 +67,6 @@ def sudoku_GUI():
             ent_square = tk.Entry(master=frm_row, justify="center", width=3, font="Calibri 30", bg=square_col)
             ent_square.pack(side=tk.LEFT)
             square_entries.append(ent_square)
-
 
     # All some padding between the sudoku and the solve button
     frm_blank = tk.Frame(height=20)
@@ -176,7 +178,7 @@ def sudoku_solver_sub_func(options_grid, output_grid, single_option_squares, fir
 
     :param options_grid: Grid of the options for each square, len(9) list of len(9) lists of sets of ints
     :param output_grid: Grid of the found squares, len(9) list of len(9) lists of ints
-    :param single_option_squares: Set of the squares with a single option that have not yet been processed,
+    :param single_option_squares: Squares with a single option that have not yet been processed,
         set of len(2) tuples of ints
     :param first_time: Use first_time to access the while loops in sudoku_solver_sub_func if no squares
         with a single option have been found
@@ -189,7 +191,7 @@ def sudoku_solver_sub_func(options_grid, output_grid, single_option_squares, fir
             first_time = False
 
         # Process single-option squares until no more remain
-        if single_number_elimination(options_grid, output_grid, single_option_squares) is False:
+        if single_option_processing(options_grid, output_grid, single_option_squares) is False:
             return False
 
         # Check if the sudoku is complete
@@ -249,60 +251,93 @@ def minimum_options_square(options_grid):
 
 
 def is_sudoku_complete(output_grid):
+    """
+    Checks if every square of the output grid is non-zero
+
+    :param output_grid: Grid of the found squares, len(9) list of len(9) lists of ints
+    :return: True if complete, False if not
+    """
 
     if any([any([square == 0 for square in row]) for row in output_grid]):
         return False
     else:
         return True
 
-def single_number_elimination(options_grid, output_grid, single_option_squares):
 
+def single_option_processing(options_grid, output_grid, single_option_squares):
+    """
+    Finds and processes single-option squares
+
+    :param options_grid: Grid of the options for each square, len(9) list of len(9) lists of sets of ints
+    :param output_grid: Grid of the found squares, len(9) list of len(9) lists of ints
+    :param single_option_squares: Squares with a single option that have not yet been processed,
+        set of len(2) tuples of ints
+    :return: None if no more single-option squares can be found, False if grid is unsolvable
+    """
+
+    # While there are single-option squares to process, stay in the loop
     while len(single_option_squares) > 0:
-        row, col = single_option_squares.pop()
-        [output_grid[row][col]] = options_grid[row][col]
+        row_num, col_num = single_option_squares.pop()
+        [output_grid[row_num][col_num]] = options_grid[row_num][col_num]
 
-        # Row
-        for col2 in range(9):
-            if col != col2:
-                options_grid[row][col2] -= options_grid[row][col]
-                if len(options_grid[row][col2]) == 0:
+        # Remove all instances of that option from the relevant row
+        for col_num2 in range(9):
+            if col_num != col_num2:
+                options_grid[row_num][col_num2] -= options_grid[row_num][col_num]
+                # If there are zero options left in a square, sudoku is unsolvable
+                if len(options_grid[row_num][col_num2]) == 0:
                     return False
-                elif len(options_grid[row][col2]) == 1 and output_grid[row][col2] == 0:
-                    single_option_squares.add((row, col2))
+                # If there is one option left in a square, add this square to single-option squares
+                elif len(options_grid[row_num][col_num2]) == 1 and output_grid[row_num][col_num2] == 0:
+                    single_option_squares.add((row_num, col_num2))
 
-        # Column
-        for row2 in range(9):
-            if row != row2:
-                options_grid[row2][col] -= options_grid[row][col]
-                if len(options_grid[row2][col]) == 0:
+        # Remove all instances of that option from the relevant column
+        for row_num2 in range(9):
+            if row_num != row_num2:
+                options_grid[row_num2][col_num] -= options_grid[row_num][col_num]
+                # If there are zero options left in a square, sudoku is unsolvable
+                if len(options_grid[row_num2][col_num]) == 0:
                     return False
-                elif len(options_grid[row2][col]) == 1 and output_grid[row2][col] == 0:
-                    single_option_squares.add((row2, col))
+                # If there is one option left in a square, add this square to single-option squares
+                elif len(options_grid[row_num2][col_num]) == 1 and output_grid[row_num2][col_num] == 0:
+                    single_option_squares.add((row_num2, col_num))
 
-
-        # Box
-        box = row_col2box(row, col)
-        box_start_row = 3 * (box // 3)
-        box_start_col = 3 * (box % 3)
+        # Remove all instances of that option from the relevant box
+        box_num = row_col2box(row_num, col_num)
+        box_start_row_num, box_start_col_num = box2start_row_col(box_num)
         for delta in range(9):
-            row_delta = delta // 3
-            col_delta = delta % 3
-            row2 = box_start_row + row_delta
-            col2 = box_start_col + col_delta
-            if row != row2 or col != col2:
-                options_grid[row2][col2] -= options_grid[row][col]
-                if len(options_grid[row2][col2]) == 0:
+            row_num_delta = delta // 3
+            col_num_delta = delta % 3
+            row_num2 = box_start_row_num + row_num_delta
+            col_num2 = box_start_col_num + col_num_delta
+            if row_num != row_num2 or col_num != col_num2:
+                options_grid[row_num2][col_num2] -= options_grid[row_num][col_num]
+                # If there are zero options left in a square, sudoku is unsolvable
+                if len(options_grid[row_num2][col_num2]) == 0:
                     return False
-                elif len(options_grid[row2][col2]) == 1 and output_grid[row2][col2] == 0:
-                    single_option_squares.add((row2, col2))
+                # If there is one option left in a square, add this square to single-option squares
+                elif len(options_grid[row_num2][col_num2]) == 1 and output_grid[row_num2][col_num2] == 0:
+                    single_option_squares.add((row_num2, col_num2))
 
-
+    # When there are no more single-option squares, return None
     return
 
 
 def grid_scanning(options_grid, single_option_squares):
+    """
+    Finds squares where an option is the only occurance in the corresponding row, column or box
 
-    # Rows
+    If an option is only possible in one square of a row/column/box, then we can assume that the value of that square
+    must be equal to that option
+    :param options_grid: Grid of the options for each square, len(9) list of len(9) lists of sets of ints
+    :param single_option_squares: Squares with a single option that have not yet been processed,
+        set of len(2) tuples of ints
+    :return: True if a single-option square was found, None if a single-option square could not be found
+    """
+
+    # Search for an option occuring once in a row
+    # 'sample' is used to randomise the search order; otherwise squares found in the top-left would have to be
+    # retraversed each time grid scanning was called
     for row in sample(range(9), 9):
         for col in sample(range(9), 9):
             if len(options_grid[row][col]) > 1:
@@ -431,53 +466,4 @@ def box2start_row_col(box_num):
     return start_row_num, start_col_num
 
 
-starting_arrangement_easy = [
-                    [0, 0, 0, 0, 0, 0, 9, 2, 6],
-                    [2, 6, 0, 9, 1, 0, 5, 0, 0],
-                    [0, 5, 4, 0, 3, 0, 0, 0, 0],
-                    [6, 0, 0, 8, 0, 5, 0, 9, 7],
-                    [8, 0, 0, 0, 0, 0, 0, 0, 1],
-                    [5, 4, 0, 1, 0, 9, 0, 0, 2],
-                    [0, 0, 0, 0, 2, 0, 1, 6, 0],
-                    [0, 0, 2, 0, 9, 6, 0, 3, 5],
-                    [3, 8, 6, 0, 0, 0, 0, 0, 0]
-                    ]
-
-
-starting_arrangement_medium = [
-                    [0, 0, 6, 0, 0, 0, 0, 0, 0],
-                    [2, 0, 0, 5, 0, 7, 3, 0, 0],
-                    [0, 0, 3, 6, 0, 0, 0, 8, 4],
-                    [0, 4, 0, 7, 5, 2, 0, 3, 0],
-                    [8, 0, 7, 0, 0, 0, 4, 0, 0],
-                    [0, 0, 0, 0, 0, 9, 0, 0, 0],
-                    [9, 6, 2, 0, 0, 0, 0, 0, 5],
-                    [1, 0, 0, 0, 2, 4, 0, 6, 3],
-                    [0, 7, 0, 0, 0, 0, 0, 2, 0]
-                    ]
-
-starting_arrangement_hard = [
-                    [4, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 9, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 7, 8, 5],
-                    [0, 0, 7, 0, 4, 8, 0, 5, 0],
-                    [0, 0, 1, 3, 0, 0, 0, 0, 0],
-                    [0, 0, 6, 0, 7, 0, 0, 0, 0],
-                    [8, 6, 0, 0, 0, 0, 9, 0, 3],
-                    [7, 0, 0, 0, 0, 5, 0, 6, 2],
-                    [0, 0, 3, 7, 0, 0, 0, 0, 0]
-                    ]
-
-starting_arrangement_expert = [
-                    [3, 0, 0, 0, 0, 0, 7, 8, 0],
-                    [0, 6, 0, 4, 0, 0, 3, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 5, 0],
-                    [9, 0, 0, 8, 1, 0, 0, 0, 0],
-                    [8, 0, 0, 3, 0, 0, 0, 2, 0],
-                    [0, 7, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 3, 9, 0, 4],
-                    [7, 0, 0, 5, 8, 0, 0, 0, 0],
-                    [0, 0, 9, 0, 0, 6, 0, 0, 5]
-                    ]
-
-sudoku_GUI()
+sudoku_gui()
